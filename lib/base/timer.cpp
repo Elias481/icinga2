@@ -57,12 +57,52 @@ static bool l_StopTimerThread;
 static TimerSet l_Timers;
 static int l_AliveTimers = 0;
 
+static boost::mutex l_CSMutex;
+static boost::condition_variable l_TimerCS;
+
 /**
  * Destructor for the Timer class.
  */
 Timer::~Timer()
 {
+	ReleaseCriticalSection();
 	Stop(true);
+}
+
+void Timer::WaitCriticalSection()
+{
+	boost::mutex::scoped_lock lock(l_CSMutex);
+	m_SyncCriticalSection1 = true;
+	l_TimerCS.wait(lock);
+}
+
+void Timer::ReleaseCriticalSection()
+{
+	boost::mutex::scoped_lock lock(l_CSMutex);
+	if (m_SyncCriticalSection1) {
+		m_SyncCriticalSection1 = false;
+		m_SyncCriticalSection2 = true;
+		l_TimerCS.notify_one();
+		l_TimerCS.wait(lock);
+	}
+}
+
+void Timer::EnterCriticalSection()
+{
+	boost::mutex::scoped_lock lock(l_CSMutex);
+	if (m_SyncCriticalSection1) {
+		l_TimerCS.notify_one();
+		l_TimerCS.wait(lock);
+	}
+}
+
+void Timer::ExitCriticalSection()
+{
+	boost::mutex::scoped_lock lock(l_CSMutex);
+	if (m_SyncCriticalSection2) {
+		m_SyncCriticalSection2 = false;
+		l_TimerCS.notify_one();
+	}
 }
 
 void Timer::Initialize()
@@ -301,6 +341,7 @@ void Timer::TimerThreadProc()
 			continue;
 		}
 
+		timer->EnterCriticalSection();
 		Timer::Ptr ptimer = timer;
 
 		/* Remove the timer from the list so it doesn't get called again
@@ -309,6 +350,7 @@ void Timer::TimerThreadProc()
 
 		timer->m_Running = true;
 
+		timer->ExitCriticalSection();
 		lock.unlock();
 
 		/* Asynchronously call the timer. */
