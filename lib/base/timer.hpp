@@ -41,7 +41,15 @@ public:
 
 	boost::signals2::signal<void(const Timer::Ptr&)> OnTimerExpired;
 
+	void WaitCriticalSection();
+
 private:
+	bool m_SyncCriticalSection1{false};
+	bool m_SyncCriticalSection2{false};
+	void ReleaseCriticalSection();
+	void EnterCriticalSection();
+	void ExitCriticalSection();
+
 	double m_Interval{0}; /**< The interval of the timer. */
 	double m_Next{0}; /**< When the next event should happen. */
 	bool m_Started{false}; /**< Whether the timer is enabled. */
