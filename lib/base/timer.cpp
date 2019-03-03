@@ -149,8 +149,9 @@ void Timer::UninitializeThread()
  */
 void Timer::Call()
 {
+	//Timer::Ptr ptimer = Timer::Ptr(this, false);
 	try {
-		OnTimerExpired(Timer::Ptr(this));
+		OnTimerExpired(this);
 	} catch (...) {
 		InternalReschedule(true);
 
@@ -342,7 +343,7 @@ void Timer::TimerThreadProc()
 		}
 
 		timer->EnterCriticalSection();
-		Timer::Ptr ptimer = timer;
+		//Timer::Ptr ptimer = timer;
 
 		/* Remove the timer from the list so it doesn't get called again
 		 * until the current call is completed. */
@@ -354,6 +355,6 @@ void Timer::TimerThreadProc()
 		lock.unlock();
 
 		/* Asynchronously call the timer. */
-		Utility::QueueAsyncCallback(std::bind(&Timer::Call, ptimer));
+		Utility::QueueAsyncCallback(std::bind(&Timer::Call, timer));
 	}
 }
