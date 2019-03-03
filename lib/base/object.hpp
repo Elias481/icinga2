@@ -188,6 +188,11 @@ private:
 	Object& operator=(const Object& rhs) = delete;
 
 	uintptr_t m_References{0};
+#ifdef _WIN32
+    short m_AlreadyFreed{0};
+#else /* _WIN32 */
+    bool m_AlreadyFreed{false};
+#endif /* _WIN32 */
 	mutable uintptr_t m_Mutex{0};
 
 #ifdef I2_DEBUG
