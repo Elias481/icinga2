@@ -260,11 +260,17 @@ void icinga::intrusive_ptr_release(Object *object)
 #endif /* _WIN32 */
 
 	if (unlikely(refs == 0)) {
+#ifdef _WIN32
+	    if (InterlockedCompareExchange16(&object->m_AlreadyFreed, 1, 0) == 0) {
+#else /* _WIN32 */
+	    if (__sync_bool_compare_and_swap(&object->m_AlreadyFreed, false, true)) {
+#endif /* _WIN32 */
 #ifdef I2_LEAK_DEBUG
-		TypeRemoveObject(object);
+		    TypeRemoveObject(object);
 #endif /* I2_LEAK_DEBUG */
 
-		delete object;
+		    delete object;
+        }
 	}
 }
 
