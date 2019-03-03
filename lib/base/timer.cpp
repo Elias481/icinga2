@@ -204,20 +204,25 @@ void Timer::InternalReschedule(bool completed, double next)
 
 	if (next < 0) {
 		/* Don't schedule the next call if this is not a periodic timer. */
-		if (m_Interval <= 0)
+		if (m_Interval <= 0) {
+            if (!m_Running and !m_Started)
+		        l_TimerCV.notify_all();
 			return;
+        }
 
 		next = Utility::GetTime() + m_Interval;
 	}
 
 	m_Next = next;
 
-	if (m_Started && !m_Running) {
-		/* Remove and re-add the timer to update the index. */
-		l_Timers.erase(this);
-		l_Timers.insert(this);
+    if (!m_Running) {
+	    if (m_Started) {
+		    /* Remove and re-add the timer to update the index. */
+		    l_Timers.erase(this);
+		    l_Timers.insert(this);
 
-		/* Notify the worker that we've rescheduled a timer. */
+		    /* Notify the worker that we've rescheduled a timer. */
+        }
 		l_TimerCV.notify_all();
 	}
 }
